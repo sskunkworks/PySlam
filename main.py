@@ -1,2 +1,2 @@
-print('hi'
-)
+print('hi')
+pritn('hi2')
