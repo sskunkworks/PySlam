@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-videoFile = 'video.mp4'
+videoFile = '../video.mp4'
 cap = cv2.VideoCapture(videoFile)
 
 while cap.isOpened():
