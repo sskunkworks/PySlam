@@ -4,12 +4,14 @@ import collections
 videoFile = '../video.mp4'
 
 lk_params = dict(winSize=(15,15),maxLevel=2,criteria=(cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-feature_params =dict( maxCorners = 100, qualityLevel = 0.3, minDistance=7, blockSize=7)
+feature_params =dict( maxCorners = 300, qualityLevel = 0.01, minDistance=30)
 
 q = collections.deque()
 qimg = collections.deque()
 cap = cv2.VideoCapture(videoFile)
 index = 1
+MAX_COUNT = 300
+MIN_DIST = 30
 color = np.random.randint(0,255,(100,3))
 while cap.isOpened():
   # Read current Image
@@ -19,25 +21,42 @@ while cap.isOpened():
     gframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     if index == 1:
-      p0 = cv2.goodFeaturesToTrack(gframe, mask=None, **feature_params)
+
+      p0 = cv2.goodFeaturesToTrack(gframe, maxCorners=MAX_COUNT, qualityLevel=0.01, minDistance=MIN_DIST, mask=None)
       old_gray = gframe.copy()
       mask = np.zeros_like(frame)
       index += 1
-      continue;
+      continue
+    
     # Tracking features
     p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, gframe, p0, None, **lk_params)
+    n_max_cnt = MAX_COUNT - len(p1)
+    print(len(p1),len(p0),n_max_cnt) 
+    n_max_cnt = MAX_COUNT - len(p1)
+    if n_max_cnt > 0:
+      
+      p0 = cv2.goodFeaturesToTrack(gframe, maxCorners=MAX_COUNT-len(p1), qualityLevel=0.01, minDistance=MIN_DIST, mask=None)
+      old_gray = gframe.copy()
+      mask = np.zeros_like(frame)
+      p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, gframe, p0, None, **lk_params)    
+    
     # select good points
     good_new = p1[st==1]
     good_old = p0[st==1]
     
+     
     # draw the tracks
     for i,(new,old) in enumerate(zip(good_new,good_old)):
       a,b = new.ravel()
       c,d = old.ravel()
       #mask = cv2.line(mask,(a,b),(c,d), color[i].tolist(),2)
-      frame = cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
-    img = cv2.add(frame,mask)  
-    cv2.imshow('frame', img)
+      #frame = cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
+      cv2.circle(frame, (int(c),int(d)), color=(0,255,0), radius=3) # green, past feature
+      cv2.circle(frame, (int(a),int(b)), color=(0,0,255), radius=3) # red, current feature
+      cv2.line(frame, (int(c),int(d)), (int(a),int(b)),color=(255,0,0)) # green to red line
+#   #img = cv2.add(frame,mask)  
+    #img = cv2.add(frame)
+    cv2.imshow('frame', frame)
     # Update the previous frame and previous points
     old_gray = gframe.copy()
     p0 = good_new.reshape(-1,1,2)
